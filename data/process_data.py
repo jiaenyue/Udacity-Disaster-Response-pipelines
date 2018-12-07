@@ -51,7 +51,7 @@ def save_data(df, database_filename):
     # save the clean dataset into an sqlite database
     db_url= "sqlite:///"+database_filename
     engine = create_engine(db_url)
-    df.to_sql('InsertTableName', engine, index=False, if_exists='replace')
+    df.to_sql('disaster_response', engine, index=False, if_exists='replace')
     print("Done!!")
 
 
