@@ -1,24 +1,157 @@
+# import libraries
+import argparse
+import os
 import sys
+
+import numpy as np
+import pandas as pd
+from sqlalchemy import create_engine
+from sqlalchemy import inspect
+
+ 
+from sklearn.pipeline import Pipeline, FeatureUnion
+from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
+from sklearn.multioutput import MultiOutputClassifier
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics import classification_report, roc_auc_score, precision_recall_fscore_support,accuracy_score,label_ranking_average_precision_score
+from sklearn.model_selection  import GridSearchCV, RandomizedSearchCV
+from sklearn.base import BaseEstimator, TransformerMixin
+
+import lightgbm as lgb
+
+import re
+
+import nltk
+nltk.download('punkt')
+nltk.download('wordnet')
+nltk.download('stopwords')
+
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
+
+class TextLengthExtractor(BaseEstimator, TransformerMixin):
+    '''
+    Add the length of the text message as a feature to dataset
+    
+    The assumption is people who is in urgent disaster condition will prefer to use less words to express
+    '''
+    
+    def fit(self, x, y=None):
+        return self
+
+    def transform(self, X):
+        return pd.DataFrame(X).applymap(len)
 
 
 def load_data(database_filepath):
-    pass
+    """ Load data from sqlite database then covert to X(traing data) and  Y(target labels)
+
+    Args:
+    database_filepath: file path of the database
+
+    Returns:
+    seriers: X, messages
+    seriers: Y, labels
+    category_names: label names   
+    """
+    engine = create_engine('sqlite:///{}'.format(database_filepath))
+    inspector = inspect(engine)
+
+    # Get table information
+    print("Tables name: ", inspector.get_table_names())
+    df = pd.read_sql("SELECT * FROM disaster_response", engine)
+
+    X = df['message']
+
+    Y_names = list(set(df.columns.values) - set( ['id','message', 'original', 'genre']))
+    Y = df[Y_names]
+
+    category_names = Y.columns.values
+
+    return X, Y, category_names
 
 
 def tokenize(text):
-    pass
+    #init stopwords and WordNetLemmatizer
+    stop_words = stopwords.words("english")
+    lemmatizer = WordNetLemmatizer()
+    
+    # normalize case and remove punctuation
+    text = re.sub(r"[^a-zA-Z0-9]", " ", text.lower())
+     
+    # tokenize text
+    tokens = word_tokenize(text)
+     
+    # lemmatize andremove stop words
+    tokens = [lemmatizer.lemmatize(word) for word in tokens if word not in stop_words]
+ 
+    return tokens
 
 
 def build_model():
-    pass
 
+    pipeline = Pipeline([
+    ('features', FeatureUnion([       
+        ('tfidfvect', TfidfVectorizer(tokenizer=tokenize)),
+        ('text_total_length', TextLengthExtractor()) # Add a new feature
+        ])),
+    ('clf', MultiOutputClassifier(lgb.LGBMClassifier(num_leaves=70))) # Change the estimator to LGBMClassifier
+    ])
+
+    parameters = {
+            'features__tfidfvect__ngram_range': [(1, 1), (1, 2)],
+            'features__tfidfvect__max_df': [0.75, 1.0],
+            'features__tfidfvect__max_features': [2000, 5000],
+            'features__transformer_weights': (
+                {'tfidfvect': 1, 'text_total_length': 0.5},
+                {'tfidfvect': 1, 'text_total_length': 1}
+            ),
+            'clf__estimator__boosting_type': ['gbdt', 'dart'],
+            'clf__estimator__n_estimators': [10, 15, 25],
+            'clf__estimator__learning_rate': [0.5, 0.1]
+            }
+
+    cv = RandomizedSearchCV(pipeline, param_distributions=parameters, cv=5)
+    
+    return cv
 
 def evaluate_model(model, X_test, Y_test, category_names):
-    pass
+    """ Evaluate model on test set,
+        Predict results for each category.
+        
+    Args:
+        model: trained model
+        X_test: pandas.DataFrame for predict 
+        y_test: pandas.DataFrame for labeled test set
+        col_name: list for category names
+        `
+    Returns: 
+        none.
+    
+    """
+    
+    # predict test df
+    Y_pred = model.predict(X_test)
+    tot_acc = 0
+    tot_f1 = 0
+    # print report 
+    for i, cat in enumerate(col_name):    
+        metrics =  classification_report(y_test[y_test.columns[i]], Y_pred[:,i])
+        tot_acc += accuracy_score(y_test[y_test.columns[i]], Y_pred[:,i])
+        tot_f1 += precision_recall_fscore_support(y_test[y_test.columns[i]], Y_pred[:,i], average = 'weighted')[2]
+        print(cat, 'accuracy: {:.5f}'.format(accuracy_score(y_test[y_test.columns[i]], Y_pred[:,i])))
+        print(metrics)
+    print('total accuracy {:.5f}'.format(tot_acc/len(col_name)))
+    print('total f1 {:.5f}'.format(tot_f1/len(col_name)))
 
 
 def save_model(model, model_filepath):
-    pass
+    
+    joblib.dump(model, model_filepath, compress = 1)
+
 
 
 def main():
