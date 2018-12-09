@@ -18,6 +18,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import classification_report, roc_auc_score, precision_recall_fscore_support,accuracy_score,label_ranking_average_precision_score
 from sklearn.model_selection  import GridSearchCV, RandomizedSearchCV
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.externals import joblib
+
+from tranformer import TextLengthExtractor
 
 import lightgbm as lgb
 
@@ -31,19 +34,6 @@ nltk.download('stopwords')
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
-
-class TextLengthExtractor(BaseEstimator, TransformerMixin):
-    '''
-    Add the length of the text message as a feature to dataset
-    
-    The assumption is people who is in urgent disaster condition will prefer to use less words to express
-    '''
-    
-    def fit(self, x, y=None):
-        return self
-
-    def transform(self, X):
-        return pd.DataFrame(X).applymap(len)
 
 
 def load_data(database_filepath):
@@ -92,6 +82,14 @@ def tokenize(text):
 
 
 def build_model():
+    """
+        Builds a classification pipeline use random grid search
+
+        Args: none.
+
+
+        Returns: A random grid sklearn model
+    """
 
     pipeline = Pipeline([
     ('features', FeatureUnion([       
@@ -114,11 +112,11 @@ def build_model():
             'clf__estimator__learning_rate': [0.5, 0.1]
             }
 
-    cv = RandomizedSearchCV(pipeline, param_distributions=parameters, cv=5)
+    rscv = RandomizedSearchCV(pipeline, param_distributions=parameters, cv=5)
     
-    return cv
+    return rscv
 
-def evaluate_model(model, X_test, Y_test, category_names):
+def evaluate_model(model, X_test, y_test, category_names):
     """ Evaluate model on test set,
         Predict results for each category.
         
@@ -126,7 +124,7 @@ def evaluate_model(model, X_test, Y_test, category_names):
         model: trained model
         X_test: pandas.DataFrame for predict 
         y_test: pandas.DataFrame for labeled test set
-        col_name: list for category names
+        category_names: list for category names
         `
     Returns: 
         none.
@@ -138,18 +136,26 @@ def evaluate_model(model, X_test, Y_test, category_names):
     tot_acc = 0
     tot_f1 = 0
     # print report 
-    for i, cat in enumerate(col_name):    
+    for i, cat in enumerate(category_names):    
         metrics =  classification_report(y_test[y_test.columns[i]], Y_pred[:,i])
         tot_acc += accuracy_score(y_test[y_test.columns[i]], Y_pred[:,i])
         tot_f1 += precision_recall_fscore_support(y_test[y_test.columns[i]], Y_pred[:,i], average = 'weighted')[2]
         print(cat, 'accuracy: {:.5f}'.format(accuracy_score(y_test[y_test.columns[i]], Y_pred[:,i])))
         print(metrics)
-    print('total accuracy {:.5f}'.format(tot_acc/len(col_name)))
-    print('total f1 {:.5f}'.format(tot_f1/len(col_name)))
+    print('total accuracy {:.5f}'.format(tot_acc/len(category_names)))
+    print('total f1 {:.5f}'.format(tot_f1/len(category_names)))
 
 
 def save_model(model, model_filepath):
-    
+    """ Persisit mode to disk use 
+
+        Args: 
+            model: a sklearn model.
+            model_filepath: the path for save model
+
+
+        Returns: none.
+    """
     joblib.dump(model, model_filepath, compress = 1)
 
 
