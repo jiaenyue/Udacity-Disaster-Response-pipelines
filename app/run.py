@@ -87,6 +87,8 @@ def index():
     graphJSON = json.dumps(graphs, cls=plotly.utils.PlotlyJSONEncoder)
     
     # render web page with plotly graphs
+    logger.info('graphJSON: %s', graphJSON) 
+
     return render_template('master.html', ids=ids, graphJSON=graphJSON)
 
 
