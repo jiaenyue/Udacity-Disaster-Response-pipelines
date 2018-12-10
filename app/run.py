@@ -55,9 +55,10 @@ def index():
     category_names = list(category.columns)
     category_count = list(category.sum(axis=0))
 
-    logger.info('genre_names: %s', genre_names) 
-    logger.info('category_names: %s', category_names)    
-    logger.info('category_count: %s', category_count) 
+
+    category_series = category[category == 1].count().sort_values(ascending=False)
+    top_10_category_names = category_series.index[:10]
+    top_10_category_count = category_series.values[:10]
 
     # create visuals
     graphs = [
@@ -65,7 +66,11 @@ def index():
             'data': [
                 Bar(
                     x=genre_names,
-                    y=genre_counts
+                    y=genre_counts,
+                    text=[x for x in genre_names],
+                    marker=dict(
+                        color='rgb(112,142,161)'
+                    ),
                 )
             ],
 
@@ -76,6 +81,58 @@ def index():
                 },
                 'xaxis': {
                     'title': "Genre"
+                }
+            }
+        },
+        {
+            'data': [
+                Bar(
+                    x=top_10_category_names,
+                    y=top_10_category_count,
+                    text=[x for x in top_10_category_names],
+                    marker=dict(
+                         color='rgb(112,142,161)'
+                    )
+                )
+            ],
+
+            'layout': {
+                'title': 'Top 10 Distribution of Message Categories',
+                'yaxis': {
+                    'title': "Count"
+                },
+                'xaxis': {
+                    'title': "Top 10 Category",
+                    'tickangle': 30,
+                    'tickfont': {
+                        'size': 10
+                    }
+                }
+            }
+        },
+        {
+            'data': [
+                Bar(
+                    x=category_names,
+                    y=category_count,
+                    text=[x for x in category_names],
+                    marker=dict(
+                         color='rgb(112,142,161)'
+                    )
+                )
+            ],
+
+            'layout': {
+                'title': 'All Distribution of Message Categories',
+                'yaxis': {
+                    'title': "Count"
+                },
+                'xaxis': {
+                    'title': "Category",
+                    'tickangle': 30,
+                    'tickfont': {
+                        'size': 10
+                    }
                 }
             }
         }
