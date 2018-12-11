@@ -20,7 +20,7 @@ from logging.handlers import RotatingFileHandler
 
 
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='/static')
 
 def tokenize(text):
     tokens = word_tokenize(text)
