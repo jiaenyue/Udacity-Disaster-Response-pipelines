@@ -1,32 +1,31 @@
 # Disaster Response Pipeline Project
+Analyze disaster data from Figure Eight to build a model for an API that classifies disaster messages.
 
 ### File Description
 
 ```
 |-- app
-|   |-- run.py
-|   |-- static
+|   |-- run.py                                  # Main flask app file
+|   |-- static                                  
 |   |   |-- images
-|   |   |   `-- 8781383171_47ea51ec1b_h.jpg
+|   |   |   `-- 8781383171_47ea51ec1b_h.jpg     # Backgroud image
 |   |   `-- stylesheet
-|   |       `-- bootstrap.min.css
+|   |       `-- bootstrap.min.css               # Bootstrap theme
 |   |-- templates
-|   |   |-- go.html
-|   |   `-- master.html
-|   `-- tranformer.py
+|   |   |-- go.html                             # Classify message result page template
+|   |   `-- master.html                         # Main page template
+|   `-- tranformer.py                           # TextLengthExtractor tranformer class for sklearn pipeline
 |-- data
-|   |-- categories.csv
-|   |-- disaster_categories.csv
-|   |-- disaster_messages.csv
-|   |-- DisasterResponse.db
-|   |-- messages.csv
-|   `-- process_data.py
+|   |-- disaster_categories.csv                 # Categories data
+|   |-- disaster_messages.csv                   # Messages data
+|   |-- DisasterResponse.db                     # Sqlite db for save pre-processed data
+|   `-- process_data.py                         # Data pre process script
 |-- models
-|   |-- classifier.pkl
-|   |-- train_classifier.py
-|   `-- tranformer.py
-|-- README.md
-`-- requirments.txt
+|   |-- classifier.pkl                          # Saved model file
+|   |-- train_classifier.py                     # Model training script
+|   `-- tranformer.py                           # TextLengthExtractor tranformer class for sklearn pipeline
+|-- README.md                                   
+`-- requirments.txt                             # Used by pip to install required python packages
 ```
 
 ### Instructions:
